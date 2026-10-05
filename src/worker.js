@@ -2,37 +2,52 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // API: informasi IP pengunjung
     if (url.pathname === "/api/ip") {
+      const cf = request.cf || {};
+      let isp = null, asn = cf.asn ? `AS${cf.asn}` : null;
+      try {
+        const r = await fetch("https://ipwho.is/" + (request.headers.get("CF-Connecting-IP") || ""));
+        if (r.ok) {
+          const d = await r.json();
+          isp = d.connection?.isp || null;
+          asn = d.connection?.asn ? `AS${d.connection.asn}` : asn;
+        }
+      } catch {}
       return Response.json({
-        ipv4: request.headers.get("CF-Connecting-IP"),
-        country: request.cf?.country || null,
-        city: request.cf?.city || null,
-        region: request.cf?.region || null,
-        timezone: request.cf?.timezone || null,
-        colo: request.cf?.colo || null
+        ip: request.headers.get("CF-Connecting-IP"),
+        country: cf.country || null,
+        city: cf.city || null,
+        region: cf.region || null,
+        timezone: cf.timezone || null,
+        asn, isp
       });
     }
 
-    // API: HTTP headers
+    if (url.pathname === "/api/ua") {
+      return Response.json({ userAgent: request.headers.get("User-Agent") || "" });
+    }
+
     if (url.pathname === "/api/headers") {
-      const headers = {};
+      const out = {};
+      for (const [k,v] of request.headers) out[k] = v;
+      return Response.json(out);
+    }
 
-      for (const [key, value] of request.headers) {
-        headers[key] = value;
+    if (url.pathname === "/api/port") {
+      const host = url.searchParams.get("host");
+      const port = url.searchParams.get("port");
+      if (!host || !/^\d{1,5}$/.test(port || "")) return Response.json({error:"Invalid host or port"}, {status:400});
+      const protocol = port === "443" || port === "8443" ? "https" : "http";
+      const target = `${protocol}://${host}:${port}/`;
+      const started = Date.now();
+      try {
+        const r = await fetch(target, {method:"HEAD", redirect:"manual"});
+        return Response.json({target, reachable:true, status:r.status, responseMs:Date.now()-started});
+      } catch {
+        return Response.json({target, reachable:false, responseMs:Date.now()-started});
       }
-
-      return Response.json(headers);
     }
 
-    // API: User Agent
-    if (url.pathname === "/api/user-agent") {
-      return Response.json({
-        userAgent: request.headers.get("User-Agent")
-      });
-    }
-
-    // Semua request lainnya → website
     return env.ASSETS.fetch(request);
   }
 };
