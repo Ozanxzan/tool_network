@@ -1,0 +1,7 @@
+name = "nazuaf-network-tools"
+main = "src/worker.js"
+compatibility_date = "2026-10-05"
+
+[assets]
+directory = "./public"
+not_found_handling = "single-page-application"

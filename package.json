@@ -1,0 +1,13 @@
+{
+  "name": "nazuaf-network-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Nazuaf Network Tools - Cloudflare Pages + Workers",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}
